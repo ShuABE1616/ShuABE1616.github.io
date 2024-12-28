@@ -1,1 +1,216 @@
 
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>クラスルームSNS</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    header {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px;
+      text-align: center;
+    }
+    main {
+      padding: 20px;
+    }
+    .section {
+      margin-bottom: 30px;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .input-box {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 5px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    ul li {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      cursor: pointer;
+    }
+    ul li:last-child {
+      border-bottom: none;
+    }
+    .chat-box {
+      margin-top: 20px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>クラスルームSNS</h1>
+  </header>
+  <main>
+    <!-- 掲示板機能 -->
+    <section class="section">
+      <h2>質問掲示板</h2>
+      <textarea class="input-box" id="questionInput" placeholder="質問を入力してください"></textarea>
+      <button onclick="postQuestion()">投稿</button>
+      <ul id="questionList"></ul>
+    </section>
+
+    <!-- グループ作成機能 -->
+    <section class="section">
+      <h2>グループチャット作成</h2>
+      <div id="userList"></div>
+      <button onclick="createGroup()">グループ作成</button>
+      <ul id="groupList"></ul>
+    </section>
+
+    <!-- グループチャット機能 -->
+    <section class="section" id="chatSection" style="display: none;">
+      <h2 id="chatTitle"></h2>
+      <div id="chatMessages" class="chat-box"></div>
+      <textarea id="chatInput" class="input-box" placeholder="メッセージを入力"></textarea>
+      <button onclick="sendMessage()">送信</button>
+    </section>
+  </main>
+
+  <script>
+    // 仮想ユーザーリスト
+    const users = [
+      "g031u001", "g031u002", "g031u003", "g031u004", "g031u005",
+      "g031u006", "g031u007", "g031u008", "g031u009", "g031u010"
+    ];
+
+    // グループとチャット履歴
+    let groups = [];
+    let chatHistory = {};
+    let activeGroup = null;
+
+    // 掲示板機能
+    function postQuestion() {
+      const questionInput = document.getElementById("questionInput");
+      const questionList = document.getElementById("questionList");
+      const question = questionInput.value.trim();
+
+      if (question) {
+        const li = document.createElement("li");
+        li.innerHTML = `
+          <p>${question}</p>
+          <textarea class="input-box" placeholder="回答を入力"></textarea>
+          <button onclick="postAnswer(this)">回答</button>
+          <div class="answer-box"></div>
+        `;
+        questionList.appendChild(li);
+        questionInput.value = "";
+      } else {
+        alert("質問を入力してください。");
+      }
+    }
+
+    function postAnswer(button) {
+      const answerInput = button.previousElementSibling;
+      const answerBox = button.nextElementSibling;
+      const answer = answerInput.value.trim();
+
+      if (answer) {
+        const p = document.createElement("p");
+        p.textContent = answer;
+        answerBox.appendChild(p);
+        answerInput.value = "";
+      } else {
+        alert("回答を入力してください。");
+      }
+    }
+
+    // 初期化：ユーザーリスト表示
+    window.onload = () => {
+      const userList = document.getElementById("userList");
+      users.forEach(user => {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = user;
+
+        const label = document.createElement("label");
+        label.textContent = user;
+
+        const div = document.createElement("div");
+        div.appendChild(checkbox);
+        div.appendChild(label);
+
+        userList.appendChild(div);
+      });
+    };
+
+    // グループ作成
+    function createGroup() {
+      const selectedMembers = [];
+      const checkboxes = document.querySelectorAll('#userList input[type="checkbox"]');
+      checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedMembers.push(checkbox.value);
+        }
+      });
+
+      if (selectedMembers.length > 0) {
+        const groupId = `Group-${Math.floor(1000 + Math.random() * 9000)}`;
+        groups.push({ id: groupId, members: selectedMembers });
+        chatHistory[groupId] = [];
+
+        const groupList = document.getElementById("groupList");
+        const li = document.createElement("li");
+        li.textContent = `${groupId} - ${selectedMembers.join(", ")}`;
+        li.onclick = () => openChat(groupId);
+        groupList.appendChild(li);
+
+        checkboxes.forEach(checkbox => checkbox.checked = false);
+      } else {
+        alert("メンバーを選択してください。");
+      }
+    }
+
+    // チャット表示
+    function openChat(groupId) {
+      activeGroup = groupId;
+      document.getElementById("chatTitle").textContent = groupId;
+      document.getElementById("chatSection").style.display = "block";
+      displayMessages();
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("chatInput");
+      if (input.value.trim()) {
+        chatHistory[activeGroup].push(input.value);
+        input.value = "";
+        displayMessages();
+      }
+    }
+
+    function displayMessages() {
+      const chatMessages = document.getElementById("chatMessages");
+      chatMessages.innerHTML = chatHistory[activeGroup].map(msg => `<p>${msg}</p>`).join("");
+    }
+  </script>
+</body>
+</html>
+
